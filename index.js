@@ -22,9 +22,12 @@ const board = [
     ["", "", "", "", "", "", "", "", ""]
 ];
 
+let delay = 100; 
+
 class SudokuSolver {
     constructor() {
         this.n = 9;
+        this.stepsQueue = [];
         this.solved = false;
     }
 
@@ -57,6 +60,8 @@ class SudokuSolver {
     }
 
     solveSudokuHelper(board, seen, i, j) {
+        if (this.solved) return; // Stop if already solved
+        
         if (i === this.n) {
             this.solved = true;
             return;
@@ -66,17 +71,16 @@ class SudokuSolver {
             this.solveSudokuHelper(board, seen, i + 1, 0);
             return;
         }
-        
+
         if (board[i][j] === '') {
             for (let val = 1; val <= 9; ++val) {
                 const charVal = val.toString();
                 if (this.isValid(seen, i, j, charVal)) {
                     this.placeValue(seen, i, j, charVal);
-                    this.updateUI(i, j, charVal); // Update the UI
+                    this.stepsQueue.push({ i, j, val: charVal }); // Store step
                     this.solveSudokuHelper(board, seen, i, j + 1);
                     if (this.solved) return;
                     this.removeValue(seen, i, j, charVal);
-                    this.updateUI(i, j, ''); // Update the UI
                 }
             }
             board[i][j] = ''; // Reset board cell if no valid number found
@@ -99,17 +103,44 @@ class SudokuSolver {
         this.solveSudokuHelper(board, seen, 0, 0);
     }
 
+    async solveWithDelay() {
+        const delayAsync = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        for (const step of this.stepsQueue) {
+            const { i, j, val } = step;
+            this.updateUI(i, j, val);
+            await delayAsync(delay);
+            this.clearColor(i, j);
+        }
+    }
+    clearColor(row,col){
+        $(`#cell-${row}-${col}`).css('background-color','white')
+    }
     updateUI(row, col, value) {
         $(`#cell-${row}-${col}`).val(value);
+        
+        $(`#cell-${row}-${col}`).css('background-color', `rgba(255, 0, 0, 0.784)`);
+
     }
 }
 
 $(document).ready(function () {
-    
+    $('#delay').text(delay);
+
     $('#solve-button').click(function () {
         const solver = new SudokuSolver();
         solver.solveSudoku(board);
-        delete solver
+        solver.solveWithDelay();
+    });
+
+    $('#plus-delay').click(function(){
+        delay += 100;
+        $('#delay').text(delay);
+    });
+
+    $('#minus-delay').click(function(){
+        delay -= 100;
+        if (delay < 0) delay = 0;
+        $('#delay').text(delay);
     });
 
     $('input').change(function(e) {
